@@ -136,4 +136,4 @@ Le DMG est signé en ad hoc (`codesign --sign -`), sans notarisation.
 - **Accès complet au disque :** une autorisation accordée peut être perdue à chaque nouvelle version, car l'identité ad hoc change avec le binaire.
 - **Installation :** pas de cask Homebrew officiel. Un tap personnel reste possible.
 - **Helper privilégié :** écarté, car il exige une signature vérifiable.
-- **CI :** `release.yml` s'exécute sur un tag, compile un binaire universel, le signe en ad hoc, crée le DMG et l'ajoute à la release GitHub.
+- **CI :** `release.yml` s'exécute sur un tag `v*`, lance les tests, compile un binaire universel, le signe en ad hoc, crée le DMG et le publie dans une release GitHub avec sa somme SHA-256.
