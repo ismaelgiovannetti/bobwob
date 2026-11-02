@@ -92,7 +92,7 @@ Crée le DMG et sa somme SHA-256 :
 scripts/build-dmg.sh
 ```
 
-Pousser un tag `v1.2.3` lance [release.yml](.github/workflows/release.yml), qui exécute les tests puis publie le DMG universel dans une release GitHub.
+Chaque pull request et chaque push sur `main` lancent [ci.yml](.github/workflows/ci.yml), qui exécute les tests et compile le DMG universel. Pousser un tag `v1.2.3` lance [release.yml](.github/workflows/release.yml), qui publie ce DMG dans une release GitHub.
 
 L'organisation du code et le modèle de règles sont décrits dans [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
