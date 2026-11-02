@@ -35,6 +35,17 @@ public enum SizeEstimate: Sendable, Equatable {
         }
     }
 
+    /// A total stays unknown when no part of it is known, instead of claiming zero.
+    public static func total<S: Sequence>(of sizes: S) -> SizeEstimate where S.Element == SizeEstimate {
+        var iterator = sizes.makeIterator()
+        guard let first = iterator.next() else { return .exact(0) }
+        var total = first
+        while let next = iterator.next() {
+            total = total + next
+        }
+        return total
+    }
+
     public static func + (lhs: SizeEstimate, rhs: SizeEstimate) -> SizeEstimate {
         switch (lhs, rhs) {
         case (.exact(let a), .exact(let b)): .exact(a + b)
@@ -97,6 +108,7 @@ public struct RuleMetadata: Codable, Sendable {
 
 public enum Availability: Sendable, Equatable {
     case available
+    case notPresent
     case unavailable(reason: String)
 }
 
@@ -156,6 +168,7 @@ public struct ScanOptions: Sendable {
     public var largeFileMinimumBytes: Int64 = 500_000_000
     public var largeFileMinimumAgeDays = 180
     public var downloadsMinimumAgeDays = 90
+    public var downloadsMinimumBytes: Int64 = 1_000_000
 
     public init() {}
 }

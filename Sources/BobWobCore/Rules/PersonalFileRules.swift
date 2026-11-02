@@ -86,9 +86,13 @@ public struct DownloadsRule: CleanupRule {
     }
 
     public func detect(in context: ScanContext) async -> Availability {
-        FileManager.default.isReadableFile(atPath: folder(in: context).path)
-            ? .available
-            : .unavailable(reason: "Dossier Téléchargements introuvable ou non accessible")
+        let path = folder(in: context).path
+        guard FileManager.default.fileExists(atPath: path) else { return .notPresent }
+        // Only a real read shows a privacy refusal: the folder's permissions look fine.
+        guard (try? FileManager.default.contentsOfDirectory(atPath: path)) != nil else {
+            return .unavailable(reason: "Accès refusé. Autorise-le dans Réglages Système > Confidentialité et sécurité > Fichiers et dossiers.")
+        }
+        return .available
     }
 
     public func scan(in context: ScanContext) -> AsyncThrowingStream<ScanEvent, Error> {
@@ -107,7 +111,8 @@ public struct DownloadsRule: CleanupRule {
                     continue
                 }
                 let result = try DiskWalker.walk(root: url.path)
-                if result.allocatedBytes == 0 { continue }
+                // A small file frees almost nothing and may matter more than its size suggests.
+                if result.allocatedBytes < context.options.downloadsMinimumBytes { continue }
                 continuation.yield(.item(PersonalFiles.makeItem(
                     ruleID: metadata.id,
                     url: url,

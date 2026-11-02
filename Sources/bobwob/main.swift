@@ -51,6 +51,9 @@ func printSummary(_ report: ScanReport) {
                     print("  \(name) \(format(rule.cleanableSize)) (\(count) élément\(count > 1 ? "s" : ""))")
                 }
                 for warning in rule.warnings { print("    ! \(warning)") }
+            case .absent:
+                let name = rule.metadata.name.padding(toLength: 34, withPad: " ", startingAt: 0)
+                print("  \(name) aucune donnée trouvée")
             case .unavailable, .failed:
                 let name = rule.metadata.name.padding(toLength: 34, withPad: " ", startingAt: 0)
                 print("  \(name) \(rule.statusMessage ?? "indisponible")")

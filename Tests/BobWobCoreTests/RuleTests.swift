@@ -31,11 +31,11 @@ private func metadata(_ id: String, risk: RiskLevel = .safe) -> RuleMetadata {
         #expect(report.cleanableSize(for: .safe).bytes ?? 0 < 1_500_000)
     }
 
-    @Test func missingTargetIsUnavailable() async throws {
+    @Test func missingTargetIsAbsent() async throws {
         let home = try TemporaryDirectory()
         let rule = DirectoryRule(metadata: metadata("absent"), resolveRoots: Roots.fixed(".absent"))
         let report = await ScanCoordinator(rules: [rule], context: makeContext(home: home.url)).report()
-        #expect(report.rules[0].status == .unavailable)
+        #expect(report.rules[0].status == .absent)
     }
 
     @Test func safeItemsArePreselectedOthersAreNot() async throws {
@@ -75,6 +75,9 @@ private func metadata(_ id: String, risk: RiskLevel = .safe) -> RuleMetadata {
         #expect(SizeEstimate.exact(1) + .estimated(2) == .estimated(3))
         #expect(SizeEstimate.exact(1) + .unknown == .estimated(1))
         #expect(SizeEstimate.unknown + .unknown == .unknown)
+        #expect(SizeEstimate.total(of: [.unknown]) == .unknown)
+        #expect(SizeEstimate.total(of: []) == .exact(0))
+        #expect(SizeEstimate.total(of: [.exact(1), .exact(2)]) == .exact(3))
     }
 
     @Test func defaultRulesHaveUniqueIDs() {
@@ -145,6 +148,36 @@ private func metadata(_ id: String, risk: RiskLevel = .safe) -> RuleMetadata {
         let home = try TemporaryDirectory()
         try home.write("Downloads/recent.zip", bytes: 2_000_000)
         let report = await ScanCoordinator(rules: [DownloadsRule()], context: makeContext(home: home.url)).report()
+        #expect(report.rules[0].items.isEmpty)
+    }
+
+    @Test func refusedDownloadsAccessExplainsWhatToDo() async throws {
+        let home = try TemporaryDirectory()
+        let folder = try home.write("Downloads/file").deletingLastPathComponent()
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: folder.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder.path) }
+
+        let report = await ScanCoordinator(rules: [DownloadsRule()], context: makeContext(home: home.url)).report()
+
+        #expect(report.rules[0].status == .unavailable)
+        #expect(report.rules[0].statusMessage?.contains("Réglages Système") == true)
+        #expect(report.rules[0].statusMessage?.contains("NSCocoa") == false)
+    }
+
+    @Test func missingDownloadsFolderIsAbsent() async throws {
+        let home = try TemporaryDirectory()
+        let report = await ScanCoordinator(rules: [DownloadsRule()], context: makeContext(home: home.url)).report()
+        #expect(report.rules[0].status == .absent)
+    }
+
+    @Test func smallDownloadsAreLeftOut() async throws {
+        let home = try TemporaryDirectory()
+        try home.write("Downloads/recovery-codes.txt", bytes: 900)
+        let future = Date().addingTimeInterval(365 * day)
+        let report = await ScanCoordinator(
+            rules: [DownloadsRule()],
+            context: makeContext(home: home.url, now: future)
+        ).report()
         #expect(report.rules[0].items.isEmpty)
     }
 

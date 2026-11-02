@@ -3,6 +3,7 @@ import Foundation
 public enum ScanUpdate: Sendable {
     case ruleStarted(id: String)
     case ruleEvent(id: String, event: ScanEvent)
+    case ruleAbsent(id: String)
     case ruleUnavailable(id: String, reason: String)
     case ruleFailed(id: String, message: String)
     case ruleFinished(id: String)
@@ -66,7 +67,13 @@ public struct ScanCoordinator: Sendable {
     private func run(_ rule: any CleanupRule, into continuation: AsyncStream<ScanUpdate>.Continuation) async {
         let id = rule.metadata.id
         continuation.yield(.ruleStarted(id: id))
-        if case .unavailable(let reason) = await rule.detect(in: context) {
+        switch await rule.detect(in: context) {
+        case .available:
+            break
+        case .notPresent:
+            continuation.yield(.ruleAbsent(id: id))
+            return
+        case .unavailable(let reason):
             continuation.yield(.ruleUnavailable(id: id, reason: reason))
             return
         }
@@ -78,7 +85,7 @@ public struct ScanCoordinator: Sendable {
         } catch is CancellationError {
             continuation.yield(.ruleFailed(id: id, message: "Scan annulé"))
         } catch {
-            continuation.yield(.ruleFailed(id: id, message: String(describing: error)))
+            continuation.yield(.ruleFailed(id: id, message: error.localizedDescription))
         }
     }
 }
@@ -88,7 +95,9 @@ public struct VolumeUsage: Codable, Sendable {
     public let availableBytes: Int64?
 
     static func read(at url: URL) -> VolumeUsage {
-        let values = try? url.resourceValues(forKeys: [.volumeTotalCapacityKey, .volumeAvailableCapacityKey])
+        // A URL instance caches its resource values, which would freeze the free space.
+        let fresh = URL(fileURLWithPath: url.path)
+        let values = try? fresh.resourceValues(forKeys: [.volumeTotalCapacityKey, .volumeAvailableCapacityKey])
         return VolumeUsage(
             totalBytes: values?.volumeTotalCapacity.map(Int64.init),
             availableBytes: values?.volumeAvailableCapacity.map(Int64.init)
@@ -98,7 +107,7 @@ public struct VolumeUsage: Codable, Sendable {
 
 public struct RuleReport: Encodable, Sendable {
     public enum Status: String, Encodable, Sendable {
-        case completed, unavailable, failed
+        case completed, absent, unavailable, failed
     }
 
     public let metadata: RuleMetadata
@@ -108,7 +117,7 @@ public struct RuleReport: Encodable, Sendable {
     public var warnings: [String]
 
     public var cleanableSize: SizeEstimate {
-        items.filter(\.isCleanable).reduce(SizeEstimate.exact(0)) { $0 + $1.size }
+        SizeEstimate.total(of: items.filter(\.isCleanable).map(\.size))
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -132,7 +141,7 @@ public struct ScanReport: Encodable, Sendable {
     public let rules: [RuleReport]
 
     public func cleanableSize(for risk: RiskLevel) -> SizeEstimate {
-        rules.filter { $0.metadata.risk == risk }.reduce(SizeEstimate.exact(0)) { $0 + $1.cleanableSize }
+        SizeEstimate.total(of: rules.filter { $0.metadata.risk == risk }.map(\.cleanableSize))
     }
 
     public struct Builder {
@@ -154,6 +163,8 @@ public struct ScanReport: Encodable, Sendable {
                 reports[id]?.items.append(item)
             case .ruleEvent(let id, .warning(let message)):
                 reports[id]?.warnings.append(message)
+            case .ruleAbsent(let id):
+                reports[id]?.status = .absent
             case .ruleUnavailable(let id, let reason):
                 reports[id]?.status = .unavailable
                 reports[id]?.statusMessage = reason

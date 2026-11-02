@@ -23,8 +23,9 @@ Sources/
     Execution/     Plans, garde-fous, journal
     Docker/        Client de l'API par socket Unix
   bobwob/          CLI : scan --json, clean (aperçu par défaut)
-  BobWobApp/       Interface SwiftUI
+  BobWobApp/       Interface SwiftUI, avec son état dans BobWobCore/Session
 Tests/BobWobCoreTests/
+packaging/         Info.plist
 scripts/           build-app.sh, build-dmg.sh
 .github/workflows/release.yml
 ```
@@ -117,7 +118,7 @@ Une erreur sur un élément (fichier verrouillé, Docker arrêté) n'interrompt 
 
 Ces règles sont toujours au niveau `dataLoss`. Rien n'est précoché et la sélection se fait fichier par fichier.
 
-- **Sources :** `~/Downloads` et une recherche de gros fichiers dans le dossier utilisateur, avec un seuil et une ancienneté réglables (500 Mo et 180 jours par défaut).
+- **Sources :** `~/Downloads`, à partir de 1 Mo et 90 jours, et une recherche de gros fichiers dans le dossier utilisateur, à partir de 500 Mo et 180 jours. Ces seuils sont des options du moteur. Un petit fichier libère très peu et peut être important, comme des codes de récupération.
 - **Détection :** parcours du disque, et non Spotlight, dont l'index peut omettre des fichiers.
 - **Ancienneté :** `kMDItemLastUsedDate` manque souvent. La date retenue est la plus récente entre le dernier usage connu, l'ajout au dossier et la modification. L'interface affiche « pas d'usage connu depuis… » et indique quand cette date est une simple approximation.
 - **Suppression :** déplacement vers la corbeille, jamais de suppression directe. L'interface précise que l'espace n'est libéré qu'une fois la corbeille vidée.

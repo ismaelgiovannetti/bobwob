@@ -32,7 +32,7 @@ public struct CleanupStep: Sendable {
     public fileprivate(set) var items: [ScanItem]
 
     public var expectedGain: SizeEstimate {
-        items.reduce(SizeEstimate.exact(0)) { $0 + $1.size }
+        SizeEstimate.total(of: items.map(\.size))
     }
 }
 
@@ -76,6 +76,6 @@ public struct CleanupPlan: Sendable {
         self.allowedRoots = allowedRoots
         self.steps = steps
         self.unplannedItems = unplanned
-        self.expectedGain = entries.reduce(SizeEstimate.exact(0)) { $0 + $1.item.size }
+        self.expectedGain = SizeEstimate.total(of: entries.map(\.item.size))
     }
 }

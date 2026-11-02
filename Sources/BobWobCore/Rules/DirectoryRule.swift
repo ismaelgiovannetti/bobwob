@@ -29,7 +29,7 @@ public struct DirectoryRule: CleanupRule {
 
     public func detect(in context: ScanContext) async -> Availability {
         let found = resolveRoots(context.home).contains { FileManager.default.fileExists(atPath: $0.path) }
-        return found ? .available : .unavailable(reason: "Aucune donnée trouvée")
+        return found ? .available : .notPresent
     }
 
     public func scan(in context: ScanContext) -> AsyncThrowingStream<ScanEvent, Error> {

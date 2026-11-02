@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>fr</string>
+    <key>CFBundleDisplayName</key>
+    <string>BobWob</string>
+    <key>CFBundleExecutable</key>
+    <string>BobWob</string>
+    <key>CFBundleIdentifier</key>
+    <string>io.github.bobwob.BobWob</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>BobWob</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.utilities</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>BobWob y cherche les gros fichiers peu utilisés. Rien n'est supprimé sans ton accord.</string>
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>BobWob y cherche les gros fichiers peu utilisés. Rien n'est supprimé sans ton accord.</string>
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>BobWob y repère les téléchargements anciens. Rien n'est supprimé sans ton accord.</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSSupportsAutomaticTermination</key>
+    <false/>
+</dict>
+</plist>
