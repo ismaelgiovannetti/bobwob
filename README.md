@@ -1,3 +1,5 @@
+<img src="docs/logo.png" alt="Logo de BobWob" width="128">
+
 # BobWob
 
 BobWob est une app macOS qui repère ce qui encombre le disque d'un développeur et le nettoie sans suppression silencieuse. Le scan ne modifie rien, et chaque nettoyage passe par un aperçu.

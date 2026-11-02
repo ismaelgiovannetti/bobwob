@@ -8,6 +8,8 @@
     <string>BobWob</string>
     <key>CFBundleExecutable</key>
     <string>BobWob</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>io.github.bobwob.BobWob</string>
     <key>CFBundleInfoDictionaryVersion</key>

@@ -18,6 +18,7 @@ rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin_path/BobWobApp" "$app/Contents/MacOS/BobWob"
 cp packaging/Info.plist "$app/Contents/Info.plist"
+cp packaging/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
 if [[ -n "${VERSION:-}" ]]; then
     plutil -replace CFBundleShortVersionString -string "$VERSION" "$app/Contents/Info.plist"
 fi
