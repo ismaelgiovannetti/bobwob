@@ -53,13 +53,16 @@ enum PersonalFiles {
             inaccessibleCount: inaccessibleCount,
             lastActivity: activity.date,
             lastActivityIsApproximate: activity.isApproximate,
-            note: "L'espace n'est libéré qu'une fois la corbeille vidée"
+            note: "L'espace n'est libéré qu'une fois la corbeille vidée",
+            fingerprint: FileFingerprint.read(atPath: url.path)
         )
     }
 
-    static func trashPlan(metadata: RuleMetadata, items: [ScanItem]) -> CleanupPlan {
-        let actions = items.compactMap(\.path).map { CleanupAction.moveToTrash(URL(fileURLWithPath: $0)) }
-        return CleanupPlan(metadata: metadata, items: items, actions: actions)
+    static func trashPlan(metadata: RuleMetadata, allowedRoots: [URL], items: [ScanItem]) -> CleanupPlan {
+        let entries = items.map { item in
+            (item: item, actions: item.path.map { [CleanupAction.moveToTrash(URL(fileURLWithPath: $0))] } ?? [])
+        }
+        return CleanupPlan(metadata: metadata, allowedRoots: allowedRoots, entries: entries)
     }
 }
 
@@ -118,7 +121,7 @@ public struct DownloadsRule: CleanupRule {
     }
 
     public func plan(for selection: [ScanItem], in context: ScanContext) async throws -> CleanupPlan {
-        PersonalFiles.trashPlan(metadata: metadata, items: cleanableSelection(selection))
+        PersonalFiles.trashPlan(metadata: metadata, allowedRoots: allowedRoots(in: context), items: cleanableSelection(selection))
     }
 }
 
@@ -132,6 +135,10 @@ public struct LargeFilesRule: CleanupRule {
     )
 
     public init() {}
+
+    public func allowedRoots(in context: ScanContext) -> [URL] {
+        [context.home]
+    }
 
     public func detect(in context: ScanContext) async -> Availability {
         .available
@@ -172,6 +179,6 @@ public struct LargeFilesRule: CleanupRule {
     }
 
     public func plan(for selection: [ScanItem], in context: ScanContext) async throws -> CleanupPlan {
-        PersonalFiles.trashPlan(metadata: metadata, items: cleanableSelection(selection))
+        PersonalFiles.trashPlan(metadata: metadata, allowedRoots: allowedRoots(in: context), items: cleanableSelection(selection))
     }
 }

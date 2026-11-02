@@ -13,9 +13,15 @@ public struct ScanCoordinator: Sendable {
     private let context: ScanContext
     private let maximumConcurrentRules: Int
 
-    public init(rules: [any CleanupRule], context: ScanContext, maximumConcurrentRules: Int = 4) {
+    /// `ledgerRules` lets a partial scan keep the same path ownership as a full one.
+    public init(
+        rules: [any CleanupRule],
+        context: ScanContext,
+        ledgerRules: [any CleanupRule]? = nil,
+        maximumConcurrentRules: Int = 4
+    ) {
         var context = context
-        for rule in rules {
+        for rule in ledgerRules ?? rules {
             for root in rule.claimedRoots(in: context) where context.ledger.owner(of: root) == nil {
                 context.ledger.claim(root, by: rule.metadata.id)
             }

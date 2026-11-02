@@ -73,6 +73,8 @@ public struct RuleMetadata: Codable, Sendable {
     public let risk: RiskLevel
     public let recoveryNote: String
     public let blockingProcesses: [String]
+    /// The target folder is named after its app, whose cache must stay untouched while it runs.
+    public let isNamedAfterOwner: Bool
 
     public init(
         id: String,
@@ -80,7 +82,8 @@ public struct RuleMetadata: Codable, Sendable {
         category: RuleCategory,
         risk: RiskLevel,
         recoveryNote: String,
-        blockingProcesses: [String] = []
+        blockingProcesses: [String] = [],
+        isNamedAfterOwner: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -88,6 +91,7 @@ public struct RuleMetadata: Codable, Sendable {
         self.risk = risk
         self.recoveryNote = recoveryNote
         self.blockingProcesses = blockingProcesses
+        self.isNamedAfterOwner = isNamedAfterOwner
     }
 }
 
@@ -109,6 +113,7 @@ public struct ScanItem: Codable, Sendable, Identifiable, Equatable {
     public let isCleanable: Bool
     public let isPreselected: Bool
     public let note: String?
+    public let fingerprint: FileFingerprint?
 
     public init(
         id: String,
@@ -122,7 +127,8 @@ public struct ScanItem: Codable, Sendable, Identifiable, Equatable {
         lastActivityIsApproximate: Bool = false,
         isCleanable: Bool = true,
         isPreselected: Bool = false,
-        note: String? = nil
+        note: String? = nil,
+        fingerprint: FileFingerprint? = nil
     ) {
         self.id = id
         self.ruleID = ruleID
@@ -136,6 +142,7 @@ public struct ScanItem: Codable, Sendable, Identifiable, Equatable {
         self.isCleanable = isCleanable
         self.isPreselected = isPreselected
         self.note = note
+        self.fingerprint = fingerprint
     }
 }
 
@@ -177,6 +184,7 @@ public struct ScanContext: Sendable {
 public protocol CleanupRule: Sendable {
     var metadata: RuleMetadata { get }
     func claimedRoots(in context: ScanContext) -> [URL]
+    func allowedRoots(in context: ScanContext) -> [URL]
     func detect(in context: ScanContext) async -> Availability
     func scan(in context: ScanContext) -> AsyncThrowingStream<ScanEvent, Error>
     func plan(for selection: [ScanItem], in context: ScanContext) async throws -> CleanupPlan
@@ -184,6 +192,7 @@ public protocol CleanupRule: Sendable {
 
 extension CleanupRule {
     public func claimedRoots(in context: ScanContext) -> [URL] { [] }
+    public func allowedRoots(in context: ScanContext) -> [URL] { claimedRoots(in: context) }
 
     func makeScanStream(
         _ body: @escaping @Sendable (AsyncThrowingStream<ScanEvent, Error>.Continuation) async throws -> Void

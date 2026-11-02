@@ -1,6 +1,17 @@
 import Foundation
 
 public enum RuleRegistry {
+    // System services keep their caches and logs here, often without a com.apple prefix.
+    private static let systemCacheNames: Set<String> = [
+        "Animoji", "CloudKit", "FamilyCircle", "GameKit", "GeoServices", "INSTALLATION", "JetPackCache",
+        "PassKit", "askpermissiond", "conda-anaconda-tos", "familycircled",
+    ]
+
+    private static let systemLogNames: Set<String> = [
+        "CoreSimulator", "DeviceLink", "DiagnosticReports", "DiscRecording.log", "PhotosSearch.aapbz",
+        "PhotosUpgrade.aapbz", "X11", "fsck_hfs.log",
+    ]
+
     /// Specific rules come first: the first rule to claim a path owns it.
     public static func defaultRules() -> [any CleanupRule] {
         [
@@ -134,7 +145,8 @@ public enum RuleRegistry {
             name: "Mises à jour d'apps en cache",
             category: .system,
             risk: .safe,
-            recoveryNote: "Retéléchargées à la prochaine mise à jour"
+            recoveryNote: "Retéléchargées à la prochaine mise à jour",
+            isNamedAfterOwner: true
         ),
         resolveRoots: Roots.children(of: "Library/Caches") { $0.hasSuffix(".ShipIt") || $0.hasSuffix("-updater") }
     )
@@ -152,7 +164,8 @@ public enum RuleRegistry {
         purge: { root, _ in
             let descriptor = root.deletingPathExtension().appendingPathExtension("ini")
             return [.removeTree(root), .removeTree(descriptor)]
-        }
+        },
+        additionalAllowedRoots: Roots.fixed(".android/avd")
     )
 
     private static let otherAppCaches = DirectoryRule(
@@ -161,9 +174,12 @@ public enum RuleRegistry {
             name: "Autres caches d'apps",
             category: .system,
             risk: .recoverable,
-            recoveryNote: "Recréés par chaque app, qui devra parfois retélécharger son contenu"
+            recoveryNote: "Recréés par chaque app, qui devra parfois retélécharger son contenu",
+            isNamedAfterOwner: true
         ),
-        resolveRoots: Roots.children(of: "Library/Caches") { !$0.hasPrefix(".") && !$0.hasPrefix("com.apple.") }
+        resolveRoots: Roots.children(of: "Library/Caches") {
+            !$0.hasPrefix(".") && !$0.hasPrefix("com.apple.") && !systemCacheNames.contains($0)
+        }
     )
 
     private static let userLogs = DirectoryRule(
@@ -174,6 +190,8 @@ public enum RuleRegistry {
             risk: .safe,
             recoveryNote: "Recréés au besoin, l'historique de diagnostic est perdu"
         ),
-        resolveRoots: Roots.children(of: "Library/Logs") { !$0.hasPrefix(".") && $0 != "BobWob" }
+        resolveRoots: Roots.children(of: "Library/Logs") {
+            !$0.hasPrefix(".") && !$0.hasPrefix("com.apple.") && $0 != "BobWob" && !systemLogNames.contains($0)
+        }
     )
 }

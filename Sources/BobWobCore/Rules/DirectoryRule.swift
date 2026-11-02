@@ -5,19 +5,26 @@ public struct DirectoryRule: CleanupRule {
     public let metadata: RuleMetadata
     private let resolveRoots: @Sendable (URL) -> [URL]
     private let purge: @Sendable (URL, ScanContext) -> [CleanupAction]
+    private let additionalAllowedRoots: @Sendable (URL) -> [URL]
 
     public init(
         metadata: RuleMetadata,
         resolveRoots: @escaping @Sendable (URL) -> [URL],
-        purge: @escaping @Sendable (URL, ScanContext) -> [CleanupAction] = { root, _ in [.removeTree(root)] }
+        purge: @escaping @Sendable (URL, ScanContext) -> [CleanupAction] = { root, _ in [.removeTree(root)] },
+        additionalAllowedRoots: @escaping @Sendable (URL) -> [URL] = { _ in [] }
     ) {
         self.metadata = metadata
         self.resolveRoots = resolveRoots
         self.purge = purge
+        self.additionalAllowedRoots = additionalAllowedRoots
     }
 
     public func claimedRoots(in context: ScanContext) -> [URL] {
         resolveRoots(context.home)
+    }
+
+    public func allowedRoots(in context: ScanContext) -> [URL] {
+        resolveRoots(context.home) + additionalAllowedRoots(context.home)
     }
 
     public func detect(in context: ScanContext) async -> Availability {
@@ -45,16 +52,18 @@ public struct DirectoryRule: CleanupRule {
                     fileCount: result.fileCount,
                     inaccessibleCount: result.inaccessibleCount,
                     isPreselected: metadata.risk == .safe,
-                    note: result.inaccessibleCount > 0 ? "Certains fichiers ne sont pas accessibles" : nil
+                    note: result.inaccessibleCount > 0 ? "Certains fichiers ne sont pas accessibles" : nil,
+                    fingerprint: FileFingerprint.read(atPath: root.path)
                 )))
             }
         }
     }
 
     public func plan(for selection: [ScanItem], in context: ScanContext) async throws -> CleanupPlan {
-        let items = cleanableSelection(selection)
-        let actions = items.compactMap(\.path).flatMap { purge(URL(fileURLWithPath: $0), context) }
-        return CleanupPlan(metadata: metadata, items: items, actions: actions)
+        let entries = cleanableSelection(selection).map { item in
+            (item: item, actions: item.path.map { purge(URL(fileURLWithPath: $0), context) } ?? [])
+        }
+        return CleanupPlan(metadata: metadata, allowedRoots: allowedRoots(in: context), entries: entries)
     }
 }
 

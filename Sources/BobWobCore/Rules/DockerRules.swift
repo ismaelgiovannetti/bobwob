@@ -111,8 +111,8 @@ public struct DockerRule: CleanupRule {
     }
 
     public func plan(for selection: [ScanItem], in context: ScanContext) async throws -> CleanupPlan {
-        let items = cleanableSelection(selection)
-        return CleanupPlan(metadata: metadata, items: items, actions: items.map { .dockerAPI(request(for: $0)) })
+        let entries = cleanableSelection(selection).map { (item: $0, actions: [CleanupAction.dockerAPI(request(for: $0))]) }
+        return CleanupPlan(metadata: metadata, allowedRoots: [], entries: entries)
     }
 
     private func request(for item: ScanItem) -> DockerRequest {
@@ -166,7 +166,7 @@ public struct DockerDiskRule: CleanupRule {
     }
 
     public func plan(for selection: [ScanItem], in context: ScanContext) async throws -> CleanupPlan {
-        CleanupPlan(metadata: metadata, items: [], actions: [])
+        CleanupPlan(metadata: metadata, allowedRoots: [], entries: [])
     }
 }
 

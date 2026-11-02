@@ -52,9 +52,15 @@ public struct DockerClient: Sendable {
     var timeout: Int = 15
 
     public func get(_ path: String) async throws -> Data {
+        try await send(method: "GET", path: path)
+    }
+
+    @discardableResult
+    public func send(method: String, path: String) async throws -> Data {
         guard FileManager.default.fileExists(atPath: socketPath) else { throw DockerError.socketNotFound }
         try Task.checkCancellation()
-        let request = Data("GET \(path) HTTP/1.1\r\nHost: docker\r\nConnection: close\r\n\r\n".utf8)
+        let bodyHeader = method == "GET" ? "" : "Content-Length: 0\r\n"
+        let request = Data("\(method) \(path) HTTP/1.1\r\nHost: docker\r\n\(bodyHeader)Connection: close\r\n\r\n".utf8)
         let raw = try await exchange(request)
         let response = try HTTPResponse.parse(raw)
         guard (200..<300).contains(response.status) else { throw DockerError.httpStatus(response.status) }

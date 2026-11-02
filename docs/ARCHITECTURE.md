@@ -22,7 +22,7 @@ Sources/
     Scanning/      Parcours du disque, registre des chemins
     Execution/     Plans, garde-fous, journal
     Docker/        Client de l'API par socket Unix
-  bobwob/          CLI : scan --json, plan, clean
+  bobwob/          CLI : scan --json, clean (aperçu par défaut)
   BobWobApp/       Interface SwiftUI
 Tests/BobWobCoreTests/
 scripts/           build-app.sh, build-dmg.sh
@@ -91,14 +91,15 @@ ScanCoordinator (actor)
 
 ## Exécution et garde-fous
 
-`CleanupExecutor` applique ces contrôles avant chaque action :
+`CleanupExecutor` applique ces contrôles avant chaque action. Un aperçu passe par les mêmes contrôles et s'arrête juste avant d'agir.
 
 1. **Chemins :** résolution du chemin réel, refus des liens symboliques et de tout chemin hors des racines déclarées par la règle.
-2. **Liste noire :** refus de `/`, `~`, `~/Library`, `~/Documents`, `/System`, `/Applications` et de leurs parents, quelle que soit la règle.
+2. **Zones protégées :** refus de tout ce qui est hors du dossier utilisateur, de `~`, `~/Library`, `~/Documents` et des autres dossiers standards, de leurs parents, ainsi que de `.ssh`, des trousseaux et des dossiers synchronisés, quelle que soit la règle.
 3. **Fraîcheur :** un élément modifié depuis le scan (inode, date de modification) est ignoré et signalé.
-4. **Processus actifs :** une cible est bloquée tant que l'un de ses `blockingProcesses` tourne.
+4. **Processus actifs :** une cible est bloquée tant que l'un de ses `blockingProcesses` tourne, ou tant que l'app qui donne son nom au dossier de cache est ouverte. Cette dernière détection reste partielle, car certains dossiers ne portent pas le nom de leur app.
 5. **Commandes :** exécutable en chemin absolu résolu, arguments fixes, pas de shell.
-6. **Journal :** chaque opération est écrite dans `~/Library/Logs/BobWob/`.
+6. **Journal :** chaque opération est écrite dans `~/Library/Logs/BobWob/` avant d'être lancée. Si l'écriture échoue, rien n'est exécuté.
+7. **Perte de données :** les plans `dataLoss` sont ignorés sans confirmation explicite.
 
 Une erreur sur un élément (fichier verrouillé, Docker arrêté) n'interrompt pas les suivants. Le rapport final distingue les réussites, les éléments ignorés et les échecs, avec l'espace libre mesuré avant et après.
 
