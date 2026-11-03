@@ -36,7 +36,7 @@ extension RiskLevel {
         switch self {
         case .safe: "Régénéré automatiquement"
         case .recoverable: "À retélécharger ou reconstruire"
-        case .dataLoss: "À choisir élément par élément"
+        case .dataLoss: "Jamais précoché, à relire avant de confirmer"
         }
     }
 

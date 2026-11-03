@@ -48,7 +48,7 @@ private func rule(_ id: String, risk: RiskLevel, path: String) -> DirectoryRule 
         #expect(session.selectedItems.map(\.ruleID) == ["safe"])
     }
 
-    @Test func wholeRuleSelectionIsRefusedForDataLoss() async throws {
+    @Test func dataLossCanBeSelectedTogetherButStaysUnselectedByDefault() async throws {
         let home = try TemporaryDirectory()
         try home.write("loss/a")
         try home.write("risky/a")
@@ -60,16 +60,23 @@ private func rule(_ id: String, risk: RiskLevel, path: String) -> DirectoryRule 
         await session.waitForScan()
 
         let loss = session.rules[0]
-        let risky = session.rules[1]
-        #expect(!session.canSelectWholeRule(loss))
-        session.setSelected(true, rule: loss)
         #expect(session.selection.isEmpty)
+        #expect(session.canSelectWholeRule(loss))
+        #expect(session.cleanableItems(with: .dataLoss).map(\.ruleID) == ["loss"])
 
-        session.setSelected(true, rule: risky)
-        #expect(session.selectedItems.map(\.ruleID) == ["risky"])
+        session.setSelected(true, rule: loss)
+        #expect(session.selectedItems.map(\.ruleID) == ["loss"])
+    }
 
-        session.setSelected(true, item: loss.items[0])
-        #expect(session.selectedItems.count == 2)
+    @Test func selectAllIgnoresInformationalRule() async throws {
+        let home = try TemporaryDirectory()
+        try home.write("Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw", bytes: 100_000)
+        let session = makeSession(home: home.url, rules: [DockerDiskRule()])
+        session.startScan()
+        await session.waitForScan()
+
+        #expect(session.cleanableItems(with: .dataLoss).isEmpty)
+        #expect(!session.canSelectWholeRule(session.rules[0]))
     }
 
     @Test func informationalItemsCannotBeSelected() async throws {

@@ -19,7 +19,7 @@ public enum RuleRegistry {
             vsCodeCaches, jetBrainsCaches, appUpdaters,
             DockerRule(kind: .images), DockerRule(kind: .buildCache),
             DockerRule(kind: .containers), DockerRule(kind: .volumes), DockerDiskRule(),
-            androidVirtualDevices,
+            androidVirtualDevices, utmVirtualMachines,
             otherAppCaches, userLogs,
             DownloadsRule(), LargeFilesRule(),
         ]
@@ -166,6 +166,20 @@ public enum RuleRegistry {
             return [.removeTree(root), .removeTree(descriptor)]
         },
         additionalAllowedRoots: Roots.fixed(".android/avd")
+    )
+
+    // A virtual machine holds real data: it goes to the Trash, unlike the caches above.
+    private static let utmVirtualMachines = DirectoryRule(
+        metadata: RuleMetadata(
+            id: "utm.virtualMachines",
+            name: "Machines virtuelles UTM",
+            category: .emulators,
+            risk: .dataLoss,
+            recoveryNote: "Déplacées vers la corbeille, récupérables tant qu'elle n'est pas vidée",
+            blockingProcesses: ["UTM"]
+        ),
+        resolveRoots: Roots.children(of: "Library/Containers/com.utmapp.UTM/Data/Documents") { $0.hasSuffix(".utm") },
+        purge: { root, _ in [.moveToTrash(root)] }
     )
 
     private static let otherAppCaches = DirectoryRule(

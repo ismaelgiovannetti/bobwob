@@ -12,9 +12,11 @@ L'interface est en français. BobWob ne demande aucun mot de passe et n'a pas be
 |---|---|---|
 | **Sûr** | Caches npm, pip, Homebrew, VS Code et JetBrains, mises à jour d'apps en cache, journaux utilisateur | Oui |
 | **Récupérable** | Paquets NuGet et Conda, navigateurs Playwright, images et cache de build Docker, autres caches d'apps | Non |
-| **Perte possible** | Conteneurs Docker arrêtés, volumes Docker non rattachés, émulateurs Android, anciens téléchargements, gros fichiers peu utilisés | Non, sélection élément par élément |
+| **Perte possible** | Conteneurs Docker arrêtés, volumes Docker non rattachés, émulateurs Android, machines virtuelles UTM, anciens téléchargements, gros fichiers peu utilisés | Non |
 
 BobWob affiche aussi la taille de `Docker.raw`, sans jamais le supprimer. Pour réinitialiser la VM, passe par Docker Desktop.
+
+La ligne « Non analysé » indique l'espace utilisé que ces règles ne mesurent pas : macOS, apps, documents et autres données. Une grande partie de cet espace est normale, et le chiffre ne correspond pas à la catégorie « Données système » de macOS.
 
 Il n'analyse pas encore Xcode, les simulateurs, Cargo, Go, CocoaPods, pnpm, les snapshots Time Machine ni les `node_modules` de tes projets.
 
@@ -37,8 +39,8 @@ macOS peut demander l'accès à tes dossiers pendant le scan. Si le scan semble 
 
 - **Aperçu :** chaque nettoyage affiche d'abord ce qui sera exécuté et ce qui sera ignoré.
 - **Zones interdites :** BobWob refuse tout chemin hors de ton dossier utilisateur, tes dossiers standards, `.ssh`, les trousseaux, les dossiers synchronisés et les liens symboliques.
-- **Fichiers personnels :** ils vont à la corbeille. L'espace n'est libéré qu'une fois celle-ci vidée.
-- **Perte de données :** ces éléments demandent une confirmation explicite.
+- **Fichiers personnels et machines virtuelles UTM :** ils vont à la corbeille. L'espace n'est libéré qu'une fois celle-ci vidée.
+- **Perte de données :** ces éléments ne sont jamais précochés. Tu peux tout cocher d'un coup, mais une confirmation explicite reste obligatoire.
 - **Changements récents :** un élément modifié depuis le scan est ignoré, tout comme le cache d'une app détectée comme ouverte.
 - **Journal :** chaque action est écrite dans `~/Library/Logs/BobWob/cleanup.log` avant d'être lancée.
 
