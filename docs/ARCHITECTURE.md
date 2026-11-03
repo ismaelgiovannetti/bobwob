@@ -52,7 +52,7 @@ public struct RuleMetadata: Sendable {
 public enum RiskLevel: Sendable {
     case safe          // Régénéré automatiquement, précoché
     case recoverable   // Récupérable avec un coût, décoché
-    case dataLoss      // Perte possible, sélection élément par élément
+    case dataLoss      // Perte possible, décoché, confirmation explicite
 }
 
 public enum SizeEstimate: Sendable {
@@ -85,7 +85,7 @@ ScanCoordinator (actor)
 - **Annulation :** le bouton Stop annule le `TaskGroup`, et `DiskWalker` vérifie l'annulation à chaque lot d'entrées.
 - **Taille :** `DiskWalker` compte la taille allouée, jamais la taille apparente, et compte une seule fois les liens durs. `Docker.raw` peut afficher 1 To tout en occupant 1 Go.
 - **Double comptage :** la règle la plus spécifique passe en premier. `PathLedger` retire par exemple `~/Library/Caches/pip` de la règle générique sur les caches.
-- **Espace non identifié :** l'interface compare l'espace consommé par le volume à la somme mesurée et affiche l'écart comme « non identifié », au lieu de le masquer.
+- **Espace non analysé :** l'interface affiche l'espace utilisé moins la somme mesurée par les règles. Le chiffre disparaît si une règle échoue, car il serait surestimé.
 - **Accès refusés :** un dossier illisible apparaît comme « non accessible », jamais comme 0 octet.
 
 À prototyper : `getattrlistbulk` et `ATTR_CMNEXT_PRIVATESIZE` pour estimer l'espace réellement libérable en présence de clones APFS.
@@ -109,14 +109,14 @@ Une erreur sur un élément (fichier verrouillé, Docker arrêté) n'interrompt 
 - **Socket :** résolu depuis le contexte Docker courant, jamais codé en dur.
 - **Transport :** HTTP/1.1 sur socket Unix POSIX, sans dépendre de la CLI ni du `PATH`. `NWConnection` a été écarté, car il échouait de façon aléatoire sur ce socket.
 - **Lecture :** `GET /system/df`.
-- **Purge :** par type de ressource, avec une sélection individuelle pour les volumes, jamais précochés.
+- **Purge :** par type de ressource, avec des volumes jamais précochés.
 - **Docker arrêté :** seule la taille allouée du disque de la VM est affichée, et la règle indique que Docker doit être démarré.
 - **Réinitialisation de la VM :** hors de l'app, avec un renvoi vers Docker Desktop.
 - **Gain :** toujours `.estimated`, car `Docker.raw` peut ne pas diminuer immédiatement.
 
 ## Fichiers personnels
 
-Ces règles sont toujours au niveau `dataLoss`. Rien n'est précoché et la sélection se fait fichier par fichier.
+Ces règles sont toujours au niveau `dataLoss`. Rien n'est précoché. La sélection peut se faire fichier par fichier ou en une fois, et la confirmation explicite reste obligatoire.
 
 - **Sources :** `~/Downloads`, à partir de 1 Mo et 90 jours, et une recherche de gros fichiers dans le dossier utilisateur, à partir de 500 Mo et 180 jours. Ces seuils sont des options du moteur. Un petit fichier libère très peu et peut être important, comme des codes de récupération.
 - **Détection :** parcours du disque, et non Spotlight, dont l'index peut omettre des fichiers.

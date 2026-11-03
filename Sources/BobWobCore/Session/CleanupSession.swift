@@ -118,6 +118,11 @@ public final class CleanupSession {
         await cleanTask?.value
     }
 
+    public var unanalyzedBytes: Int64? {
+        guard phase == .ready else { return nil }
+        return volume?.unanalyzedBytes(rules: rules)
+    }
+
     // MARK: Selection
 
     public var selectedItems: [ScanItem] {
@@ -141,9 +146,12 @@ public final class CleanupSession {
         }
     }
 
-    /// Selecting a whole rule is refused when data can be lost: those items go one by one.
     public func canSelectWholeRule(_ rule: RuleReport) -> Bool {
-        rule.metadata.risk != .dataLoss && !cleanableItems(of: rule).isEmpty
+        !cleanableItems(of: rule).isEmpty
+    }
+
+    public func cleanableItems(with risk: RiskLevel) -> [ScanItem] {
+        rules.filter { $0.metadata.risk == risk }.flatMap { cleanableItems(of: $0) }
     }
 
     public func setSelected(_ isSelected: Bool, rule: RuleReport) {

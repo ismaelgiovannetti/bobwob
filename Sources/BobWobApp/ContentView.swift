@@ -80,7 +80,7 @@ struct ContentView: View {
                                 RuleRow(rule: rule, session: session)
                             }
                         } header: {
-                            RiskHeader(risk: risk, rules: rules)
+                            RiskHeader(risk: risk, rules: rules, session: session)
                         }
                     }
                 }
@@ -161,6 +161,13 @@ private struct VolumeHeader: View {
                 Text(status).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             progress
+            if let unanalyzed = session.unanalyzedBytes {
+                Text("Non analysé : \(Format.bytes(unanalyzed)) (macOS, apps, documents et données que BobWob ne couvre pas)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .help("Espace utilisé moins ce que les règles de BobWob ont mesuré. Une grande partie de cet espace est normale et ne doit pas être supprimée.")
+            }
             if phase == .scanning {
                 Text("Si le scan semble bloqué, macOS attend peut-être ta réponse pour accéder à un dossier.")
                     .font(.caption)
@@ -215,6 +222,7 @@ private struct VolumeHeader: View {
 private struct RiskHeader: View {
     let risk: RiskLevel
     let rules: [RuleReport]
+    let session: CleanupSession
 
     private var total: SizeEstimate {
         SizeEstimate.total(of: rules.map(\.cleanableSize))
@@ -222,6 +230,7 @@ private struct RiskHeader: View {
 
     var body: some View {
         HStack(spacing: 6) {
+            selectAll
             Image(systemName: risk.symbol)
                 .foregroundStyle(risk.tint)
                 .accessibilityHidden(true)
@@ -234,5 +243,23 @@ private struct RiskHeader: View {
                 .help(Format.sizeHelp(total))
         }
         .padding(.vertical, 2)
+    }
+
+    @ViewBuilder
+    private var selectAll: some View {
+        let bindings = session.cleanableItems(with: risk).map { item in
+            Binding(
+                get: { session.selection.contains(item.id) },
+                set: { session.setSelected($0, item: item) }
+            )
+        }
+        if !bindings.isEmpty {
+            Toggle(sources: bindings, isOn: \.self) {
+                Text("Tout cocher : \(risk.title)")
+            }
+            .labelsHidden()
+            .toggleStyle(.checkbox)
+            .help("Tout cocher ou décocher dans cette section")
+        }
     }
 }

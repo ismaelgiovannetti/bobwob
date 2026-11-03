@@ -86,6 +86,77 @@ private func metadata(_ id: String, risk: RiskLevel = .safe) -> RuleMetadata {
     }
 }
 
+@Suite struct UTMRuleTests {
+    private func rule() throws -> any CleanupRule {
+        try #require(RuleRegistry.defaultRules().first { $0.metadata.id == "utm.virtualMachines" })
+    }
+
+    @Test func offersEachVirtualMachineUnselectedAndSendsItToTrash() async throws {
+        let home = try TemporaryDirectory()
+        let documents = "Library/Containers/com.utmapp.UTM/Data/Documents"
+        try home.write("\(documents)/Linux.utm/Data/disk.img", bytes: 200_000)
+        try home.write("\(documents)/notes.txt", bytes: 200_000)
+        let rule = try rule()
+        let context = makeContext(home: home.url)
+
+        let report = await ScanCoordinator(rules: [rule], context: context).report()
+        let items = report.rules[0].items
+        #expect(items.map(\.title) == ["Linux.utm"])
+        #expect(!items[0].isPreselected)
+        #expect(report.rules[0].metadata.risk == .dataLoss)
+
+        let plan = try await rule.plan(for: items, in: context)
+        #expect(plan.actions == [.moveToTrash(URL(fileURLWithPath: items[0].path!))])
+        #expect(plan.blockingProcesses == ["UTM"])
+
+        let pathGuard = try #require(PathGuard(home: home.url))
+        guard case .allowed = pathGuard.evaluate(URL(fileURLWithPath: items[0].path!), allowedRoots: plan.allowedRoots) else {
+            Issue.record("La VM devrait passer les garde-fous")
+            return
+        }
+    }
+
+    @Test func containerFolderItselfStaysProtected() throws {
+        let home = try TemporaryDirectory()
+        let container = try home.write("Library/Containers/com.utmapp.UTM/Data/Documents/x").deletingLastPathComponent()
+        let pathGuard = try #require(PathGuard(home: home.url))
+        #expect(pathGuard.evaluate(home.url.appending(path: "Library/Containers"), allowedRoots: [home.url]) == .refused("Dossier protégé"))
+        #expect(pathGuard.evaluate(container, allowedRoots: []) == .refused("Chemin hors des racines déclarées par la règle"))
+    }
+}
+
+@Suite struct UnanalyzedSpaceTests {
+    private func report(_ bytes: Int64?, status: RuleReport.Status = .completed, cleanable: Bool = true) -> RuleReport {
+        let size: SizeEstimate = bytes.map(SizeEstimate.exact) ?? .unknown
+        return RuleReport(
+            metadata: RuleMetadata(id: "r", name: "r", category: .system, risk: .safe, recoveryNote: ""),
+            status: status,
+            statusMessage: nil,
+            items: [ScanItem(id: "i", ruleID: "r", title: "i", size: size, isCleanable: cleanable)],
+            warnings: []
+        )
+    }
+
+    private let volume = VolumeUsage(totalBytes: 100, availableBytes: 30)
+
+    @Test func subtractsEverythingMeasuredIncludingInformation() {
+        #expect(volume.unanalyzedBytes(rules: [report(20), report(5, cleanable: false)]) == 45)
+    }
+
+    @Test func unknownSizesCountAsNothing() {
+        #expect(volume.unanalyzedBytes(rules: [report(nil)]) == 70)
+    }
+
+    @Test func neverGoesNegative() {
+        #expect(volume.unanalyzedBytes(rules: [report(500)]) == 0)
+    }
+
+    @Test func staysUnknownWhenARuleFailedOrVolumeIsUnknown() {
+        #expect(volume.unanalyzedBytes(rules: [report(1, status: .failed)]) == nil)
+        #expect(VolumeUsage(totalBytes: nil, availableBytes: nil).unanalyzedBytes(rules: []) == nil)
+    }
+}
+
 @Suite struct PersonalFileTests {
     private let day: TimeInterval = 86_400
 

@@ -105,6 +105,17 @@ public struct VolumeUsage: Codable, Sendable {
     }
 }
 
+extension VolumeUsage {
+    /// Used space that no rule measured. Unknown after a failed rule, which would inflate it.
+    public func unanalyzedBytes(rules: [RuleReport]) -> Int64? {
+        guard let totalBytes, let availableBytes,
+            !rules.contains(where: { $0.status == .failed })
+        else { return nil }
+        let measured = rules.flatMap(\.items).reduce(Int64(0)) { $0 + ($1.size.bytes ?? 0) }
+        return max(0, totalBytes - availableBytes - measured)
+    }
+}
+
 public struct RuleReport: Encodable, Sendable {
     public enum Status: String, Encodable, Sendable {
         case completed, absent, unavailable, failed

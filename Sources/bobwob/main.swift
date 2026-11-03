@@ -8,9 +8,9 @@ let usage = """
       bobwob rules                            Liste les règles disponibles
 
     Options de clean :
-      --item <chemin|id>    Choisit un élément (obligatoire pour une règle à perte possible)
-      --all-items           Choisit tous les éléments, sauf sur une règle à perte possible
-      --allow-data-loss     Autorise les règles à perte possible
+      --item <chemin|id>    Choisit un élément
+      --all-items           Choisit tous les éléments des règles demandées
+      --allow-data-loss     Autorise les règles à perte possible, même pour l'aperçu
       --yes                 Exécute réellement le plan
 
     Sans --item ni --all-items, seuls les éléments précochés sont choisis.
@@ -29,8 +29,11 @@ func format(_ size: SizeEstimate) -> String {
     }
 }
 
-func printSummary(_ report: ScanReport) {
+func printSummary(_ report: ScanReport, isPartial: Bool) {
     print("Volume : \(formatBytes(report.volume.availableBytes)) libres sur \(formatBytes(report.volume.totalBytes))")
+    if !isPartial, let unanalyzed = report.volume.unanalyzedBytes(rules: report.rules) {
+        print("Non analysé : \(formatBytes(unanalyzed)) (macOS, apps, documents et données hors règles)")
+    }
     print(String(format: "Scan terminé en %.1f s\n", report.durationSeconds))
 
     let labels: [(RiskLevel, String)] = [(.safe, "SÛR"), (.recoverable, "RÉCUPÉRABLE"), (.dataLoss, "PERTE POSSIBLE")]
@@ -96,7 +99,7 @@ func runScan(arguments: [String]) async throws {
         FileHandle.standardOutput.write(try encoder.encode(report))
         print()
     } else {
-        printSummary(report)
+        printSummary(report, isPartial: !selected.isEmpty)
     }
 }
 
@@ -147,7 +150,7 @@ func runClean(arguments: [String]) async throws -> Int32 {
                 return true
             }
             guard itemKeys.isEmpty else { return false }
-            return rule.metadata.risk != .dataLoss && (allItems || item.isPreselected)
+            return allItems || item.isPreselected
         }
         plans.append(try await rule.plan(for: selection, in: context))
     }
